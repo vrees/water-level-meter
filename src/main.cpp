@@ -25,7 +25,7 @@
 const byte ADCBOARDVOLTAGE_PIN = 35; // Prefer Use of ADC1 (8 channels, attached to GPIOs 32 - 39) . ADC2 (10 channels, attached to GPIOs 0, 2, 4, 12 - 15 and 25 - 27)
 const byte ADC_BITS = 10;            // 10 - 12 bits
 
-byte read_voltage()
+uint16_t read_voltage()
 {
   // multisample ADC
   const byte NO_OF_SAMPLES = 5;
@@ -43,7 +43,7 @@ byte read_voltage()
   Serial.print(F(" Avg="));
   Serial.println(adc_reading);
   // Convert ADC reading to voltage in deciVolt, 1024/2048/4096 not hardcoded but calculated depending on the set ADC_BITS
-  byte voltage = adc_reading * 22 * 2 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
+  uint16_t voltage = adc_reading * 2200 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
   return voltage;
 }
 
