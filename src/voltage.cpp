@@ -20,7 +20,7 @@ String readBatteryPercentage(byte pin)
 /**
  * https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function
  */
-double ReadVoltage(byte pin)
+double readVoltage(byte pin)
 {
     double reading = analogRead(pin); // Reference voltage is 3v3 so maximum reading is 3v3 = 4095 in range 0 to 4095
     if (reading < 1 || reading > 4095)

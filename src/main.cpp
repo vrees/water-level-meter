@@ -21,29 +21,26 @@
 #define LORA_IO2 LMIC_UNUSED_PIN
 
 const byte VOLTAGE_PIN = 35; // Prefer Use of ADC1 (8 channels, attached to GPIOs 32 - 39) . ADC2 (10 channels, attached to GPIOs 0, 2, 4, 12 - 15 and 25 - 27)
-const byte ADC_BITS = 10;    // 10 - 12 bits
+const byte ADC_BITS = 12;    // 10 - 12 bits
+
 
 uint16_t read_voltage()
 {
-  // multisample ADC
-  const byte NO_OF_SAMPLES = 5;
-  uint32_t adc_reading = 0;
-  Serial.print(F("D022 ADC Measurement:"));
-  analogRead(VOLTAGE_PIN); // First measurement has the biggest difference on my board, this line just skips the first measurement
-  for (int i = 0; i < NO_OF_SAMPLES; i++)
-  {
-    uint16_t thisReading = analogRead(VOLTAGE_PIN);
-    adc_reading += thisReading;
-    Serial.print(F(" "));
-    Serial.print(thisReading);
-  }
-  adc_reading /= NO_OF_SAMPLES;
-  Serial.print(F(" Avg="));
+  uint32_t adc_reading = analogRead(VOLTAGE_PIN);;
+  Serial.print(F("ADC="));
   Serial.println(adc_reading);
   // Convert ADC reading to voltage in deciVolt, 1024/2048/4096 not hardcoded but calculated depending on the set ADC_BITS
-  uint16_t voltage = adc_reading * 2200 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
+
+  double voltage = adc_reading * 1100 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
+  
+  // Serial.print(F(", Voltage="));
+  // Serial.println(voltage);
+  
   return voltage;
 }
+
+
+double readVoltage(byte pin);
 
 void setup()
 {
@@ -52,14 +49,14 @@ void setup()
   Serial.println(F("ADC Measurements on the ESP32"));
 
   analogReadResolution(ADC_BITS); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
-  analogSetAttenuation(ADC_6db);  // Default is 11db which is very noisy. Recommended to use 2.5 or 6. Options ADC_0db (1.1V), ADC_2_5db (1.5V), ADC_6db (2.2V), ADC_11db (3.9V but max VDD=3.3V)
+  analogSetAttenuation(ADC_0db);  // Default is 11db which is very noisy. Recommended to use 2.5 or 6. Options ADC_0db (1.1V), ADC_2_5db (1.5V), ADC_6db (2.2V), ADC_11db (3.9V but max VDD=3.3V)
   pinMode(VOLTAGE_PIN, INPUT);
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
-  Serial.print(F("Voltage: "));
-  Serial.println(read_voltage());
+  // double voltage = readVoltage(VOLTAGE_PIN);  
+  double voltage = read_voltage();    
+  Serial.println(voltage);
   delay(2000);
 }
