@@ -41,13 +41,13 @@ uint16_t read_voltage()
   Serial.println(adc_reading);
   // Convert ADC reading to voltage in deciVolt, 1024/2048/4096 not hardcoded but calculated depending on the set ADC_BITS
 
-  double voltage = adc_reading * 2200 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
+  double voltage = adc_reading * 2.2 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
 
   // Serial.print(F(", Voltage="));
   // Serial.println(voltage);
 
   Serial.print(voltage);
-  Serial.print("\t");
+  Serial.print(" V \t");
   Serial.println(adc_reading);
 
   return voltage;
