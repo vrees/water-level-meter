@@ -1,13 +1,6 @@
 #include <Arduino.h>
-#include <SPI.h>
 #include <U8x8lib.h>
-
-#ifdef U8X8_HAVE_HW_SPI
-#include <SPI.h>
-#endif
-#ifdef U8X8_HAVE_HW_I2C
 #include <Wire.h>
-#endif
 
 #define HAS_LORA 1         // comment out if device shall not send data via LoRa
 #define CFG_sx1276_radio 1 // HPD13A LoRa SoC
@@ -24,46 +17,43 @@
 #define LORA_IO2 LMIC_UNUSED_PIN
 
 //For TTGO LoRa32 V2 use:
-#define MY_OLED_SDA (4)
-#define MY_OLED_SCL (15)
+#define MY_OLED_SDA (21)
+#define MY_OLED_SCL (22)
 #define MY_OLED_RST (16)
 
-U8X8_SSD1306_128X64_NONAME_HW_I2C display(MY_OLED_RST, MY_OLED_SCL, MY_OLED_SDA);
+U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(MY_OLED_RST, MY_OLED_SCL, MY_OLED_SDA);
 
 const byte VOLTAGE_PIN = 35; // Prefer Use of ADC1 (8 channels, attached to GPIOs 32 - 39) . ADC2 (10 channels, attached to GPIOs 0, 2, 4, 12 - 15 and 25 - 27)
 const byte ADC_BITS = 12;    // 10 - 12 bits
 
-uint16_t read_voltage()
+float voltage = 0;
+uint16_t adc_reading = 0;
+uint16_t counter = 0;
+
+void read_voltage()
 {
-  uint32_t adc_reading = analogRead(VOLTAGE_PIN);
-  
-  Serial.print(F("ADC="));
-  Serial.println(adc_reading);
+  adc_reading = analogRead(VOLTAGE_PIN);
   // Convert ADC reading to voltage in deciVolt, 1024/2048/4096 not hardcoded but calculated depending on the set ADC_BITS
 
-  double voltage = adc_reading * 2.2 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
-
-  // Serial.print(F(", Voltage="));
-  // Serial.println(voltage);
-
-  Serial.print(voltage);
-  Serial.print(" V \t");
-  Serial.println(adc_reading);
-
-  return voltage;
+  voltage = adc_reading * 2.20 / (1 << ADC_BITS); // 3.9V because of 11dB, 100K/100K Voltage Divider, maxResolution (1024/2048/4096)
 }
 
-double readVoltage(byte pin);
+float calcHeigth()
+{
+  float height = 48.7 * voltage - 17.3;
+  return -height;
+}
+
+double readVoltageCompensated(byte pin);
 
 void setup()
 {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  Serial.println(F("ADC Measurements on the ESP32"));
-  display.begin();
-  display.refreshDisplay();
-  display.clearDisplay();
-  display.setFont(u8x8_font_chroma48medium8_r);
+  Serial.println("ADC Measurements on the ESP32");
+
+  u8x8.begin();
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
 
   analogReadResolution(ADC_BITS); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
   analogSetAttenuation(ADC_6db);  // Default is 11db which is very noisy. Recommended to use 2.5 or 6. Options ADC_0db (1.1V), ADC_2_5db (1.5V), ADC_6db (2.2V), ADC_11db (3.9V but max VDD=3.3V)
@@ -72,16 +62,31 @@ void setup()
 
 void loop()
 {
-  // double voltage = readVoltage(VOLTAGE_PIN);
-  // Serial.println(voltage);
+  char buff[16];
 
   read_voltage();
 
-  
-  display.drawString(0, 1, "ABC defg");
+  u8x8.inverse();
 
-  // display.setFont(u8g2_font_px437wyse700b_2x2_r);
-  display.drawString(0, 2, "ABC defg");
+  snprintf(buff, sizeof(buff), "U:%.2fV", voltage);
+  u8x8.draw2x2String(0, 0, buff);
+
+  u8x8.noInverse();
+  // u8x8.setCursor(0, 3);
+  // u8x8.printf("ADC:%-4d", adc_reading);
+
+  snprintf(buff, sizeof(buff), "ADC:%-4d", adc_reading);
+  u8x8.draw2x2String(0, 3, buff);
+
+  float height = calcHeigth();
+  snprintf(buff, sizeof(buff), "%.1fcm", height);
+  u8x8.draw2x2String(0, 5, buff);
+
+  counter++;
+  u8x8.setCursor(10, 7);
+  u8x8.printf("%i", counter);
+
+  Serial.printf("U=%.2fV\t\tADC=%-4d\t\tHeight=:%.1fcm\n", voltage, adc_reading, height);
 
   delay(2000);
 }
