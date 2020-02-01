@@ -2,6 +2,20 @@
 #include <U8x8lib.h>
 #include <Wire.h>
 
+/*
+* eTapeContinuous Fluid Level Sensor PN-12110215TC-24  PN-6573TC-24
+* Sensor Length: 660mm
+* Active Sensor Length:12.4" 660mm
+* Reference Resistor (Rref): 3000Ω, ±10%    gemessen:   3200Ω
+* Sensor Output empty:       3000Ω          
+* Sensor Output: full:        300Ω          gemessen:   400Ω
+* Resistance Gradient: 44/cm, ±10%          
+* PowerRating:  0.5 Watts (VMax = 10V)
+*
+* Voltage Gradient bei 3.3V:                gemessen:   48.7 V/cm
+* s [cm] = 48.7cm/V * U[V] - 17.3cm         gerechnet:  46,5 V/cm
+*
+*/
 #define HAS_LORA 1         // comment out if device shall not send data via LoRa
 #define CFG_sx1276_radio 1 // HPD13A LoRa SoC
 
@@ -67,7 +81,6 @@ void loop()
   read_voltage();
 
   u8x8.inverse();
-
   snprintf(buff, sizeof(buff), "U:%.2fV", voltage);
   u8x8.draw2x2String(0, 0, buff);
 
