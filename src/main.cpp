@@ -29,7 +29,7 @@ static const u1_t PROGMEM APPEUI[8] = {0x1F, 0x9C, 0x02, 0xD0, 0x7E, 0xD5, 0xB3,
 void os_getArtEui(u1_t *buf) { memcpy_P(buf, APPEUI, 8); }
 
 // This should also be in little endian format, see above.
-static const u1_t PROGMEM DEVEUI[8] = {0xC0, 0xE7, 0x9F, 0x1B, 0x29, 0xBB, 0x13, 0x00};
+static const u1_t PROGMEM DEVEUI[8] = {0xC5, 0xE7, 0x9F, 0x1B, 0x29, 0xBB, 0x13, 0x00};
 void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
 
 // This key should be in big endian format (or, since it is not really a
@@ -40,7 +40,7 @@ static const u1_t PROGMEM APPKEY[16] = {0x1D, 0x48, 0xB6, 0xFA, 0xBE, 0x11, 0xBC
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
 #define CFG_sx1276_radio 1 // HPD13A LoRa SoC
-const unsigned TX_INTERVAL = 10;
+const unsigned TX_INTERVAL = 30;
 
 // #define HAS_LED NOT_A_PIN // on-board LED is wired to SCL (used by display) therefore totally useless
 
@@ -120,8 +120,8 @@ void readSensorValues()
   printValues();
 
   lpp.reset();
-  lpp.addVoltage(1, voltage);
-  lpp.addAltitude(2, height);
+  lpp.addAnalogInput(1, voltage);
+  lpp.addTemperature(2, height);
 }
 
 // double readVoltageCompensated(byte pin);
