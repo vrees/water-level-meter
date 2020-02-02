@@ -40,7 +40,7 @@ static const u1_t PROGMEM APPKEY[16] = {0x1D, 0x48, 0xB6, 0xFA, 0xBE, 0x11, 0xBC
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
 #define CFG_sx1276_radio 1 // HPD13A LoRa SoC
-const unsigned TX_INTERVAL = 5;
+const unsigned TX_INTERVAL = 10;
 
 // #define HAS_LED NOT_A_PIN // on-board LED is wired to SCL (used by display) therefore totally useless
 
