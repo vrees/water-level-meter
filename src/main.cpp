@@ -4,6 +4,7 @@
 #include <hal/hal.h>
 #include <SPI.h>
 #include <U8x8lib.h>
+#include "EEPROM.h"
 
 /*
 * eTapeContinuous Fluid Level Sensor PN-12110215TC-24  PN-6573TC-24
@@ -19,6 +20,7 @@
 * s [cm] = 48.7cm/V * U[V] - 17.3cm         gerechnet:  46,5 V/cm
 *
 * https://github.com/LilyGO/TTGO-LORA32
+* https://github.com/bertrik/LoraWanPmSensor/blob/master/Esp32PmSensor/Esp32PmSensor.ino
 */
 
 // This EUI must be in little-endian format, so least-significant-byte
@@ -39,8 +41,18 @@ void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
 static const u1_t PROGMEM APPKEY[16] = {0x1D, 0x48, 0xB6, 0xFA, 0xBE, 0x11, 0xBC, 0xC1, 0x64, 0x02, 0x8B, 0x0F, 0x0E, 0x9F, 0x49, 0x90};
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
+typedef struct
+{
+  u4_t netid = 0;
+  devaddr_t devaddr = 0;
+  u1_t nwkKey[16];
+  u1_t artKey[16];
+  uint32_t magic;
+} otaa_data_t;
+#define OTAA_MAGIC 0xCAFEBABE
+
 #define CFG_sx1276_radio 1 // HPD13A LoRa SoC
-const unsigned TX_INTERVAL = 30;
+const unsigned TX_INTERVAL = 20;
 
 // #define HAS_LED NOT_A_PIN // on-board LED is wired to SCL (used by display) therefore totally useless
 
@@ -84,6 +96,7 @@ const byte ADC_BITS = 12;    // 10 - 12 bits
 float voltage = 0;
 float height = 0;
 uint16_t adc_reading = 0;
+static otaa_data_t otaa_data;
 
 float calcHeigth()
 {
@@ -124,7 +137,34 @@ void readSensorValues()
   lpp.addTemperature(2, height);
 }
 
-// double readVoltageCompensated(byte pin);
+static void print_keys(void)
+{
+  Serial.print("netid: ");
+  Serial.println(otaa_data.netid, DEC);
+  Serial.print("devaddr: ");
+  Serial.println(otaa_data.devaddr, HEX);
+  Serial.print("artKey: ");
+  for (int i = 0; i < sizeof(otaa_data.artKey); ++i)
+  {
+    Serial.printf("%02X", otaa_data.artKey[i]);
+  }
+  Serial.println("");
+  Serial.print("nwkKey: ");
+  for (int i = 0; i < sizeof(otaa_data.nwkKey); ++i)
+  {
+    Serial.printf("%02X", otaa_data.nwkKey[i]);
+  }
+  Serial.println("");
+}
+
+void storeKeysInEeprom()
+{
+  LMIC_getSessionKeys(&otaa_data.netid, &otaa_data.devaddr, otaa_data.nwkKey,
+                      otaa_data.artKey);
+  otaa_data.magic = OTAA_MAGIC;
+  EEPROM.put(0, otaa_data);
+  EEPROM.commit();
+}
 
 void onEvent(ev_t ev)
 {
@@ -149,33 +189,15 @@ void onEvent(ev_t ev)
     break;
   case EV_JOINED:
     Serial.println(F("EV_JOINED"));
-    {
-      u4_t netid = 0;
-      devaddr_t devaddr = 0;
-      u1_t nwkKey[16];
-      u1_t artKey[16];
-      LMIC_getSessionKeys(&netid, &devaddr, nwkKey, artKey);
-      Serial.print("netid: ");
-      Serial.println(netid, DEC);
-      Serial.print("devaddr: ");
-      Serial.println(devaddr, HEX);
-      Serial.print("artKey: ");
-      for (int i = 0; i < sizeof(artKey); ++i)
-      {
-        Serial.print(artKey[i], HEX);
-      }
-      Serial.println("");
-      Serial.print("nwkKey: ");
-      for (int i = 0; i < sizeof(nwkKey); ++i)
-      {
-        Serial.print(nwkKey[i], HEX);
-      }
-      Serial.println("");
-    }
+
+    storeKeysInEeprom();
+    print_keys();
+
     // Disable link check validation (automatically enabled
     // during join, but because slow data rates change max TX
     // size, we don't use it in this example.
     LMIC_setLinkCheckMode(0);
+    Serial.println(F("Join ok"));
     break;
   /*
         || This event is defined but not used in the code. No
@@ -204,7 +226,11 @@ void onEvent(ev_t ev)
       readDownloadData();
     }
     // Schedule next transmission
-    os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+    // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+
+    esp_sleep_enable_timer_wakeup(20 * 1000000LL);
+    Serial.println("Will sleep now!");
+    esp_deep_sleep_start(); // Sleep for e.g. 30 minutes
     break;
   case EV_LOST_TSYNC:
     Serial.println(F("EV_LOST_TSYNC"));
@@ -296,8 +322,19 @@ void setup()
 
   // LMIC init
   os_init();
-  // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
+  EEPROM.begin(512);
+  EEPROM.get(0, otaa_data);
+  if (otaa_data.magic == OTAA_MAGIC)
+  {
+    LMIC_setSession(otaa_data.netid, otaa_data.devaddr, otaa_data.nwkKey, otaa_data.artKey);
+    Serial.println(F("Keys loaded from EEPROM:"));
+    print_keys();
+  }
+  else
+  {
+    LMIC_startJoining();
+  }
 
   // Start job (sending automatically starts OTAA too)
   do_send(&sendjob);
