@@ -225,12 +225,17 @@ void onEvent(ev_t ev)
 
       readDownloadData();
     }
+
     // Schedule next transmission
     // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
 
-    esp_sleep_enable_timer_wakeup(20 * 1000000LL);
-    Serial.println("Will sleep now!");
-    esp_deep_sleep_start(); // Sleep for e.g. 30 minutes
+    esp_err_t err;
+    err = esp_sleep_enable_timer_wakeup(2 * 60 * 1000000LL);
+    Serial.print(F("err="));
+    Serial.println(err);
+    Serial.println(F("Will sleep now ..."));
+    esp_deep_sleep_start();
+
     break;
   case EV_LOST_TSYNC:
     Serial.println(F("EV_LOST_TSYNC"));
@@ -325,16 +330,16 @@ void setup()
   LMIC_reset();
   EEPROM.begin(512);
   EEPROM.get(0, otaa_data);
-  if (otaa_data.magic == OTAA_MAGIC)
-  {
-    LMIC_setSession(otaa_data.netid, otaa_data.devaddr, otaa_data.nwkKey, otaa_data.artKey);
-    Serial.println(F("Keys loaded from EEPROM:"));
-    print_keys();
-  }
-  else
-  {
+  // if (otaa_data.magic == OTAA_MAGIC)
+  // {
+  //   LMIC_setSession(otaa_data.netid, otaa_data.devaddr, otaa_data.nwkKey, otaa_data.artKey);
+  //   Serial.println(F("Keys loaded from EEPROM:"));
+  //   print_keys();
+  // }
+  // else
+  // {
     LMIC_startJoining();
-  }
+  // }
 
   // Start job (sending automatically starts OTAA too)
   do_send(&sendjob);
